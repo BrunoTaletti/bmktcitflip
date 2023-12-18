@@ -12,6 +12,10 @@
   <ul id="flipping-results"></ul>
 
   <script>
+    let lastFetchTime = 0;
+    const fetchInterval = 30000; // 30 segundos
+    const maxRequestsPerMinute = 180;
+
     // Função para carregar apenas os IDs do arquivo items.json
     function carregarIDs() {
       return fetch('items.json')
@@ -21,23 +25,33 @@
     }
 
     function consultarAPIs(ids) {
-      const urlBase = 'https://west.albion-online-data.com/api/v2/stats/history/';
-      const timeScale = '1';
-      const locations = ['Caerleon', 'BlackMarket'];
+      const currentTime = Date.now();
+      const timeSinceLastFetch = currentTime - lastFetchTime;
 
-      // Constrói dinamicamente as URIs para cada item e localização
-      const uris = ids.flatMap(id => locations.map(location => `${urlBase}${id}.json?time-scale=${timeScale}&locations=${location}`));
+      // Verifica se é permitido fazer a próxima chamada à API com base nos limites
+      if (timeSinceLastFetch >= fetchInterval) {
+        lastFetchTime = currentTime;
 
-      // Faz as chamadas de API para cada URI
-      const promessas = uris.map(uri => fetch(uri).then(response => response.json()));
+        const urlBase = 'https://west.albion-online-data.com/api/v2/stats/history/';
+        const timeScale = '1';
+        const locations = ['Caerleon', 'BlackMarket'];
 
-      // Aguarda que todas as chamadas de API sejam concluídas
-      Promise.all(promessas)
-        .then(respostas => {
-          // respostas contém os dados de todas as chamadas de API
-          calcularLucro(respostas);
-        })
-        .catch(error => console.error('Erro ao consultar APIs:', error));
+        // Constrói dinamicamente as URIs para cada item e localização
+        const uris = ids.flatMap(id => locations.map(location => `${urlBase}${id}.json?time-scale=${timeScale}&locations=${location}`));
+
+        // Faz as chamadas de API para cada URI
+        const promessas = uris.map(uri => fetch(uri).then(response => response.json()));
+
+        // Aguarda que todas as chamadas de API sejam concluídas
+        Promise.all(promessas)
+          .then(respostas => {
+            // respostas contém os dados de todas as chamadas de API
+            calcularLucro(respostas);
+          })
+          .catch(error => console.error('Erro ao consultar APIs:', error));
+      } else {
+        console.log('Limite de taxa atingido. Aguardando próximo intervalo.');
+      }
     }
 
     function calcularLucro(respostas) {
@@ -75,10 +89,9 @@
     // Atualiza a cada 30 segundos
     setInterval(() => {
       carregarIDs().then(ids => consultarAPIs(ids));
-    }, 30000);
+    }, fetchInterval);
 
   </script>
 
 </body>
 </html>
-
