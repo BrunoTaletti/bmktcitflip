@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Flipping</title>
+</head>
+<body>
+
+  <h1>Calculadora de Flipping</h1>
+
+  <ul id="flipping-results"></ul>
+
+  <script>
+    // Função para carregar apenas os IDs do arquivo items.json
+    function carregarIDs() {
+      return fetch('items.json')
+        .then(response => response.json())
+        .then(data => data.map(item => item.UniqueName))
+        .catch(error => console.error('Erro ao carregar IDs:', error));
+    }
+
+    function consultarAPIs(ids) {
+      const urlBase = 'https://west.albion-online-data.com/api/v2/stats/history/';
+      const timeScale = '1';
+      const locations = ['Caerleon', 'BlackMarket'];
+
+      // Constrói dinamicamente as URIs para cada item e localização
+      const uris = ids.flatMap(id => locations.map(location => `${urlBase}${id}.json?time-scale=${timeScale}&locations=${location}`));
+
+      // Faz as chamadas de API para cada URI
+      const promessas = uris.map(uri => fetch(uri).then(response => response.json()));
+
+      // Aguarda que todas as chamadas de API sejam concluídas
+      Promise.all(promessas)
+        .then(respostas => {
+          // respostas contém os dados de todas as chamadas de API
+          calcularLucro(respostas);
+        })
+        .catch(error => console.error('Erro ao consultar APIs:', error));
+    }
+
+    function calcularLucro(respostas) {
+      // Lógica para calcular o lucro com base nos dados obtidos
+      // Substitua isso pela lógica específica do seu jogo
+
+      const flippingResults = document.getElementById('flipping-results');
+      flippingResults.innerHTML = ''; // Limpa resultados antigos
+
+      respostas.forEach((data, index) => {
+        const itemId = data[0]?.item_id; // Supondo que o item_id está presente no primeiro objeto
+
+        // Adapte isso conforme necessário
+        const profit = calcularProfit(data);
+
+        if (profit > 0) {
+          const listItem = document.createElement('li');
+          listItem.textContent = `Item ID: ${itemId}, Lucro: ${profit}`;
+          flippingResults.appendChild(listItem);
+        }
+      });
+    }
+
+    function calcularProfit(data) {
+      // Lógica específica para calcular o lucro com base nos dados obtidos
+      // Substitua isso pela lógica específica do seu jogo
+      // Aqui você pode acessar os dados específicos de compra e venda do BlackMarket
+      // e calcular o lucro com base nesses valores
+      return 0; // Substitua isso pelo cálculo real
+    }
+
+    // Inicia o processo
+    carregarIDs().then(ids => consultarAPIs(ids));
+
+    // Atualiza a cada 30 segundos
+    setInterval(() => {
+      carregarIDs().then(ids => consultarAPIs(ids));
+    }, 30000);
+
+  </script>
+
+</body>
+</html>
+
