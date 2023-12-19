@@ -41,8 +41,11 @@ function fetchItemData() {
                     fetch(blackmarketURL).then(response => response.json())
                 ])
                 .then(([caerleonData, blackmarketData]) => {
-                    // Process data and update the table
-                    updateTable(item, caerleonData, blackmarketData);
+                    // Check if the item is bought by Blackmarket and generates profit
+                    if (blackmarketData[0].buy_quantity > 0 && caerleonData[0].sell_price_min < blackmarketData[0].buy_price_max) {
+                        // Process data and update the table
+                        updateTable(item, caerleonData, blackmarketData);
+                    }
                 })
                 .catch(error => console.error(`Error fetching data for ${item.UniqueName}:`, error));
             });
@@ -51,32 +54,35 @@ function fetchItemData() {
 }
 
 function updateTable(item, caerleonData, blackmarketData) {
-    // Extract relevant information from API responses
-    const caerleonQuality = caerleonData[0].quality;
-    const caerleonSellPriceMin = caerleonData[0].sell_price_min;
-    const caerleonSellPriceMax = caerleonData[0].sell_price_max;
+    // Check if the item is bought by Blackmarket and generates profit
+    if (blackmarketData[0].buy_quantity > 0 && caerleonData[0].sell_price_min < blackmarketData[0].buy_price_max) {
+        // Extract relevant information from API responses
+        const caerleonQuality = caerleonData[0].quality;
+        const caerleonSellPriceMin = caerleonData[0].sell_price_min;
+        const caerleonSellPriceMax = caerleonData[0].sell_price_max;
 
-    const blackmarketBuyPriceMin = blackmarketData[0].buy_price_min;
-    const blackmarketBuyPriceMax = blackmarketData[0].buy_price_max;
+        const blackmarketBuyPriceMin = blackmarketData[0].buy_price_min;
+        const blackmarketBuyPriceMax = blackmarketData[0].buy_price_max;
 
-    // Calculate profit and other relevant values (customize as per your calculations)
-    const profit = Math.max(0, (blackmarketBuyPriceMax - caerleonSellPriceMin));
-    const caerleonQuantity = caerleonData[0].sell_quantity;
-    const blackmarketQuantity = blackmarketData[0].buy_quantity;
+        // Calculate profit and other relevant values (customize as per your calculations)
+        const profit = Math.max(0, (blackmarketBuyPriceMax - caerleonSellPriceMin));
+        const caerleonQuantity = caerleonData[0].sell_quantity;
+        const blackmarketQuantity = blackmarketData[0].buy_quantity;
 
-    // Example: Add a row to the table
-    const tableBody = document.getElementById('itemTableBody');
-    const row = tableBody.insertRow();
-    row.innerHTML = `
-        <td>${item.UniqueName}</td>
-        <td>${caerleonQuality}</td>
-        <td>${caerleonSellPriceMin} - ${caerleonSellPriceMax}</td>
-        <td>${blackmarketBuyPriceMin} - ${blackmarketBuyPriceMax}</td>
-        <td>${profit}</td>
-        <td>${caerleonQuantity}</td>
-        <td>${blackmarketQuantity}</td>
-        <td><img src="https://render.albiononline.com/v1/item/${item.UniqueName}.png" alt="${item.UniqueName}"></td>
-    `;
+        // Example: Add a row to the table
+        const tableBody = document.getElementById('itemTableBody');
+        const row = tableBody.insertRow();
+        row.innerHTML = `
+            <td>${item.UniqueName}</td>
+            <td>${caerleonQuality}</td>
+            <td>${caerleonSellPriceMin} - ${caerleonSellPriceMax}</td>
+            <td>${blackmarketBuyPriceMin} - ${blackmarketBuyPriceMax}</td>
+            <td>${profit}</td>
+            <td>${caerleonQuantity}</td>
+            <td>${blackmarketQuantity}</td>
+            <td><img src="https://render.albiononline.com/v1/item/${item.UniqueName}.png" alt="${item.UniqueName}"></td>
+        `;
+    }
 }
 
 // Initial fetch
