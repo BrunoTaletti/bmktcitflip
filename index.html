@@ -1,97 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calculadora de Flipping</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Flipping Calculator</title>
 </head>
 <body>
 
-  <h1>Calculadora de Flipping</h1>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th>Quality</th>
+            <th>Caerleon Sell Price</th>
+            <th>Blackmarket Buy Price</th>
+            <th>Profit</th>
+            <th>Caerleon Quantity</th>
+            <th>Blackmarket Quantity</th>
+            <th>Image</th>
+        </tr>
+    </thead>
+    <tbody id="itemTableBody">
+        <!-- Item rows will be added dynamically here -->
+    </tbody>
+</table>
 
-  <ul id="flipping-results"></ul>
-
-  <script>
-    let lastFetchTime = 0;
-    const fetchInterval = 30000; // 30 segundos
-    const maxRequestsPerMinute = 180;
-
-    // Função para carregar apenas os IDs do arquivo items.json
-    function carregarIDs() {
-      return fetch('items.json')
+<script>
+function fetchItemData() {
+    // Read items.json file to get item names
+    fetch('items.json')
         .then(response => response.json())
-        .then(data => data.map(item => item.UniqueName))
-        .catch(error => console.error('Erro ao carregar IDs:', error));
-    }
+        .then(items => {
+            // Iterate through each item and fetch data from both APIs
+            items.forEach(item => {
+                const caerleonURL = `https://west.albion-online-data.com/api/v2/stats/prices/${item.UniqueName}.json?locations=Caerleon`;
+                const blackmarketURL = `https://west.albion-online-data.com/api/v2/stats/prices/${item.UniqueName}.json?locations=Blackmarket`;
 
-    function consultarAPIs(ids) {
-      const currentTime = Date.now();
-      const timeSinceLastFetch = currentTime - lastFetchTime;
+                Promise.all([
+                    fetch(caerleonURL).then(response => response.json()),
+                    fetch(blackmarketURL).then(response => response.json())
+                ])
+                .then(([caerleonData, blackmarketData]) => {
+                    // Process data and update the table
+                    updateTable(item, caerleonData, blackmarketData);
+                })
+                .catch(error => console.error(`Error fetching data for ${item.UniqueName}:`, error));
+            });
+        })
+        .catch(error => console.error('Error fetching item data:', error));
+}
 
-      // Verifica se é permitido fazer a próxima chamada à API com base nos limites
-      if (timeSinceLastFetch >= fetchInterval) {
-        lastFetchTime = currentTime;
+function updateTable(item, caerleonData, blackmarketData) {
+    // Extract relevant information from API responses
+    const caerleonQuality = caerleonData[0].quality;
+    const caerleonSellPriceMin = caerleonData[0].sell_price_min;
+    const caerleonSellPriceMax = caerleonData[0].sell_price_max;
 
-        const urlBase = 'https://west.albion-online-data.com/api/v2/stats/history/';
-        const timeScale = '1';
-        const locations = ['Caerleon', 'BlackMarket'];
+    const blackmarketBuyPriceMin = blackmarketData[0].buy_price_min;
+    const blackmarketBuyPriceMax = blackmarketData[0].buy_price_max;
 
-        // Constrói dinamicamente as URIs para cada item e localização
-        const uris = ids.flatMap(id => locations.map(location => `${urlBase}${id}.json?time-scale=${timeScale}&locations=${location}`));
+    // Calculate profit and other relevant values (customize as per your calculations)
+    const profit = Math.max(0, (blackmarketBuyPriceMax - caerleonSellPriceMin));
+    const caerleonQuantity = caerleonData[0].sell_quantity;
+    const blackmarketQuantity = blackmarketData[0].buy_quantity;
 
-        // Faz as chamadas de API para cada URI
-        const promessas = uris.map(uri => fetch(uri).then(response => response.json()));
+    // Example: Add a row to the table
+    const tableBody = document.getElementById('itemTableBody');
+    const row = tableBody.insertRow();
+    row.innerHTML = `
+        <td>${item.UniqueName}</td>
+        <td>${caerleonQuality}</td>
+        <td>${caerleonSellPriceMin} - ${caerleonSellPriceMax}</td>
+        <td>${blackmarketBuyPriceMin} - ${blackmarketBuyPriceMax}</td>
+        <td>${profit}</td>
+        <td>${caerleonQuantity}</td>
+        <td>${blackmarketQuantity}</td>
+        <td><img src="https://render.albiononline.com/v1/item/${item.UniqueName}.png" alt="${item.UniqueName}"></td>
+    `;
+}
 
-        // Aguarda que todas as chamadas de API sejam concluídas
-        Promise.all(promessas)
-          .then(respostas => {
-            // respostas contém os dados de todas as chamadas de API
-            calcularLucro(respostas);
-          })
-          .catch(error => console.error('Erro ao consultar APIs:', error));
-      } else {
-        console.log('Limite de taxa atingido. Aguardando próximo intervalo.');
-      }
-    }
+// Initial fetch
+fetchItemData();
 
-    function calcularLucro(respostas) {
-      // Lógica para calcular o lucro com base nos dados obtidos
-      // Substitua isso pela lógica específica do seu jogo
-
-      const flippingResults = document.getElementById('flipping-results');
-      flippingResults.innerHTML = ''; // Limpa resultados antigos
-
-      respostas.forEach((data, index) => {
-        const itemId = data[0]?.item_id; // Supondo que o item_id está presente no primeiro objeto
-
-        // Adapte isso conforme necessário
-        const profit = calcularProfit(data);
-
-        if (profit > 0) {
-          const listItem = document.createElement('li');
-          listItem.textContent = `Item ID: ${itemId}, Lucro: ${profit}`;
-          flippingResults.appendChild(listItem);
-        }
-      });
-    }
-
-    function calcularProfit(data) {
-      // Lógica específica para calcular o lucro com base nos dados obtidos
-      // Substitua isso pela lógica específica do seu jogo
-      // Aqui você pode acessar os dados específicos de compra e venda do BlackMarket
-      // e calcular o lucro com base nesses valores
-      return 0; // Substitua isso pelo cálculo real
-    }
-
-    // Inicia o processo
-    carregarIDs().then(ids => consultarAPIs(ids));
-
-    // Atualiza a cada 30 segundos
-    setInterval(() => {
-      carregarIDs().then(ids => consultarAPIs(ids));
-    }, fetchInterval);
-
-  </script>
+// Set interval to fetch data every 1 hour
+setInterval(fetchItemData, 3600000); // 1 hour = 3600000 milliseconds
+</script>
 
 </body>
 </html>
